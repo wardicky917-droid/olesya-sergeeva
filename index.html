@@ -1,0 +1,620 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
+<meta name="description" content="Дневник воды — простой трекер дневной нормы воды с напоминаниями.">
+<meta name="theme-color" content="#0A1730">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Дневник воды">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Дневник воды</title>
+<style>
+:root{
+  --bg:#0A1730;
+  --bg-grad:linear-gradient(165deg,#1B3168 0%,#0E1E42 50%,#060D1F 100%);
+  --surface:#101F3E;
+  --surface-2:#16294D;
+  --ring-track:#1D3358;
+  --accent-1:#3B82F6;
+  --accent-2:#22D3EE;
+  --text:#E7EEFC;
+  --text-muted:#8CA0C7;
+  --border:#1D3358;
+  --success:#34D399;
+  --success-bg:#0F2A22;
+  --danger:#F87171;
+  --danger-bg:#2A1416;
+  --hero-1:#2B4A8F;
+  --hero-2:#16295A;
+  --hero-3:#080F24;
+  --hero-text:#F0F5FF;
+  --hero-text-muted:rgba(240,245,255,.68);
+  --hero-ring-track:rgba(255,255,255,.12);
+  --hero-shadow:0 24px 48px -20px rgba(0,0,0,.7);
+  --card-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 16px 30px -20px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{height:100%;}
+body{
+  background:var(--bg-grad);
+  color:var(--text);
+  font-family:'Manrope',system-ui,sans-serif;
+  padding:max(24px,env(safe-area-inset-top)) 16px calc(40px + env(safe-area-inset-bottom)) 16px;
+  min-height:100%;
+  margin:0;
+  overscroll-behavior-y:contain;
+}
+button,a,input,select{touch-action:manipulation;}
+.page{max-width:420px;margin:0 auto;display:flex;flex-direction:column;gap:16px;}
+.hero{position:relative;overflow:hidden;border-radius:28px;padding:22px 22px 26px;display:flex;flex-direction:column;align-items:center;gap:16px;background:linear-gradient(158deg,var(--hero-1) 0%,var(--hero-2) 55%,var(--hero-3) 100%);box-shadow:var(--hero-shadow);color:var(--hero-text);}
+.hero-waves{position:absolute;left:0;bottom:0;width:100%;height:64px;z-index:0;}
+.hero-top{position:relative;z-index:1;width:100%;display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;}
+.brand{display:flex;align-items:center;gap:7px;}
+.brand-chip{width:22px;height:22px;border-radius:8px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.brand-label{font-family:'Fraunces',Georgia,serif;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--hero-text-muted);}
+.date{font-family:'Fraunces',Georgia,serif;font-size:21px;font-weight:600;font-style:italic;text-wrap:balance;color:var(--hero-text);}
+.tagline{font-family:'Fraunces',Georgia,serif;font-size:13.5px;font-weight:600;color:var(--hero-text-muted);font-style:italic;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:20px;box-shadow:var(--card-shadow);}
+.figure-wrap{position:relative;z-index:1;width:108px;height:182px;filter:drop-shadow(0 10px 18px rgba(0,20,30,.25));}
+.figure-wrap svg{width:100%;height:100%;display:block;overflow:visible;}
+.fill-wave{animation:waveDrift 3.6s linear infinite;}
+@keyframes waveDrift{from{transform:translateX(0);}to{transform:translateX(-50px);}}
+.figure-readout{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:2px;margin-top:-6px;}
+.figure-amount{font-family:'Fraunces',Georgia,serif;font-weight:700;font-size:clamp(34px,9vw,42px);line-height:1;font-variant-numeric:tabular-nums;color:var(--hero-text);}
+.figure-unit{font-size:13px;color:var(--hero-text-muted);font-weight:600;margin-top:-2px;}
+.figure-goal{font-size:13px;color:var(--hero-text-muted);}
+@media (prefers-reduced-motion:reduce){
+  .fill-wave{animation:none;}
+}
+.status-line{position:relative;z-index:1;font-size:13.5px;font-weight:700;padding:8px 16px;border-radius:999px;background:rgba(255,255,255,.18);color:var(--hero-text);border:1px solid rgba(255,255,255,.3);backdrop-filter:blur(6px);display:flex;align-items:center;gap:6px;}
+.status-line.done{background:rgba(255,255,255,.92);color:var(--accent-1);border-color:transparent;}
+.section-title{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin:0 0 12px;}
+.quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.quick-btn{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:14px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-family:inherit;cursor:pointer;text-align:left;transition:transform .12s ease,background .15s ease,box-shadow .15s ease;}
+.quick-btn:hover{background:var(--ring-track);box-shadow:0 6px 14px -8px rgba(59,130,246,.4);}
+.quick-btn:active{transform:scale(.97);}
+.quick-btn svg{flex-shrink:0;}
+.quick-btn-label{font-size:13px;font-weight:700;line-height:1.2;}
+.quick-btn-ml{font-size:12px;color:var(--text-muted);}
+.custom-row{margin-top:10px;}
+.text-btn{background:none;border:none;color:var(--accent-1);font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:6px 2px;}
+.text-btn.muted{color:var(--text-muted);}
+.inline-form{display:flex;gap:8px;margin-top:10px;}
+.inline-form input[type="number"]{flex:1;min-width:0;padding:12px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:16px;font-variant-numeric:tabular-nums;}
+.inline-form input[type="number"]:focus{outline:2px solid var(--accent-1);outline-offset:1px;}
+.inline-form button{padding:10px 16px;border-radius:12px;border:none;background:var(--accent-1);color:#fff;font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;}
+.log-list{display:flex;flex-direction:column;gap:0;max-height:260px;overflow-y:auto;}
+.log-row{display:flex;align-items:center;justify-content:space-between;padding:10px 2px;border-bottom:1px solid var(--border);}
+.log-row:last-child{border-bottom:none;}
+.log-left{display:flex;align-items:center;gap:10px;}
+.log-time{font-size:12px;color:var(--text-muted);font-variant-numeric:tabular-nums;width:42px;}
+.log-ml{font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
+.log-del{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:6px;border-radius:8px;display:flex;}
+.log-del:hover{background:var(--danger-bg);color:var(--danger);}
+.empty-note{font-size:13px;color:var(--text-muted);font-style:italic;padding:8px 2px;}
+.week-row{display:flex;justify-content:space-between;align-items:flex-end;gap:6px;height:112px;}
+.week-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;height:100%;}
+.week-pct{font-size:10.5px;font-weight:800;color:var(--accent-1);font-variant-numeric:tabular-nums;height:13px;}
+.week-bar-track{width:100%;max-width:26px;height:72px;background:var(--ring-track);border-radius:9px;display:flex;align-items:flex-end;overflow:hidden;}
+.week-bar-fill{width:100%;background:linear-gradient(180deg,var(--accent-2),var(--accent-1));border-radius:9px;box-shadow:inset 0 2px 0 rgba(255,255,255,.4);transition:height .3s ease;}
+.week-col.today .week-bar-fill{background:linear-gradient(180deg,var(--accent-1),var(--success));}
+.week-label{font-size:11px;color:var(--text-muted);font-weight:600;}
+.week-col.today .week-label{color:var(--text);font-weight:800;}
+.goal-row{display:flex;align-items:center;justify-content:space-between;}
+.goal-value{font-size:15px;font-weight:700;}
+.icon-btn{background:none;border:1px solid var(--border);border-radius:10px;padding:7px;color:var(--text-muted);cursor:pointer;display:flex;}
+.icon-btn:hover{color:var(--accent-1);border-color:var(--accent-1);}
+.suggestion{margin-top:10px;font-size:13px;color:var(--text-muted);display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--surface-2);border-radius:12px;padding:10px 12px;}
+.footnote{font-size:11.5px;line-height:1.5;color:var(--text-muted);padding:2px 4px;}
+[hidden]{display:none!important;}
+.switch{position:relative;width:44px;height:26px;flex-shrink:0;display:inline-block;}
+.switch input{opacity:0;width:100%;height:100%;margin:0;position:absolute;cursor:pointer;z-index:1;}
+.switch .track{position:absolute;inset:0;background:var(--ring-track);border-radius:999px;transition:background .2s;}
+.switch input:checked ~ .track{background:var(--accent-1);}
+.switch .thumb{position:absolute;top:3px;left:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 2px rgba(0,0,0,.25);}
+.switch input:checked ~ .thumb{transform:translateX(18px);}
+.reminder-settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.reminder-settings-label{display:flex;flex-direction:column;gap:2px;}
+.reminder-settings-label span:last-child{font-size:12px;color:var(--text-muted);}
+.reminder-interval{margin-top:12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.reminder-interval select{padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:13px;}
+.reminder-banner{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:40;pointer-events:none;}
+.reminder-card{pointer-events:auto;max-width:380px;width:100%;background:var(--surface);border:1px solid var(--accent-1);box-shadow:0 10px 28px rgba(0,0,0,.2);border-radius:16px;padding:14px;display:flex;align-items:center;gap:12px;animation:reminder-in .25s ease;}
+.reminder-icon{flex-shrink:0;display:flex;}
+.reminder-text{flex:1;display:flex;flex-direction:column;gap:2px;font-size:13px;min-width:0;}
+.reminder-text strong{font-size:14px;}
+.reminder-text span{color:var(--text-muted);}
+.reminder-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.reminder-add-btn{background:var(--accent-1);color:#fff;border:none;border-radius:10px;padding:8px 12px;font-family:inherit;font-weight:700;font-size:12.5px;cursor:pointer;}
+.reminder-close{background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;display:flex;}
+@keyframes reminder-in{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+.undo-toast{position:fixed;left:16px;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;justify-content:center;z-index:41;}
+.undo-toast-card{pointer-events:auto;background:var(--surface);border:1px solid var(--border);box-shadow:0 10px 28px rgba(0,0,0,.3);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:14px;font-size:13px;}
+.undo-toast-btn{background:none;border:none;color:var(--accent-1);font-family:inherit;font-weight:700;font-size:13px;cursor:pointer;}
+@media (prefers-reduced-motion:reduce){
+  .week-bar-fill{transition:none;}
+  .reminder-card{animation:none;}
+}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;0,800;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="app"></div>
+<div id="reminder-banner" class="reminder-banner" hidden></div>
+<div id="undo-toast" class="undo-toast" hidden></div>
+<script>
+(function(){
+  "use strict";
+
+  var BACKUP_KEY = 'water-tracker-state-v1';
+
+  var STATE = {goal:1740, logs:{}, remindersEnabled:false, reminderMinutes:60};
+  try{
+    var savedRaw = localStorage.getItem(BACKUP_KEY);
+    if(savedRaw){
+      var saved = JSON.parse(savedRaw);
+      if(saved && saved.logs) STATE = saved;
+    }
+  }catch(e){}
+  if(typeof STATE.remindersEnabled!=='boolean') STATE.remindersEnabled=false;
+  if(!STATE.reminderMinutes) STATE.reminderMinutes=60;
+  if(STATE.reminderMinutes%60!==0) STATE.reminderMinutes = Math.max(60, Math.round(STATE.reminderMinutes/60)*60);
+
+  var undoToastTimer = null;
+  var reminderTimer = null;
+  var audioCtx = null;
+  var origTitle = document.title;
+  var titleFlashTimer = null;
+  var REMINDER_HOURS = [1,2,3,4,6,8];
+
+  var QUICK_ADDS = [
+    {label:'Стакан', ml:200},
+    {label:'Чашка', ml:250},
+    {label:'Бутылка', ml:500},
+    {label:'Большая бутылка', ml:750}
+  ];
+
+  var WEEKDAY_SHORT = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+  function pad(n){ return String(n).padStart(2,'0'); }
+  function dateKey(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function timeLabel(d){ return pad(d.getHours())+':'+pad(d.getMinutes()); }
+  function makeId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+  function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
+
+  function ruPlural(n,forms){
+    var mod10=n%10, mod100=n%100;
+    if(mod10===1 && mod100!==11) return forms[0];
+    if(mod10>=2 && mod10<=4 && (mod100<10||mod100>=20)) return forms[1];
+    return forms[2];
+  }
+
+  function totalFor(key){
+    var entries = STATE.logs[key] || [];
+    var sum=0;
+    for(var i=0;i<entries.length;i++) sum += entries[i].amount;
+    return sum;
+  }
+
+  function dropletIcon(size,color){
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'+
+      '<path d="M12 2.5C12 2.5 5 11.2 5 15.5C5 19.6 8.13 22.5 12 22.5C15.87 22.5 19 19.6 19 15.5C19 11.2 12 2.5 12 2.5Z" fill="'+(color||'currentColor')+'"/></svg>';
+  }
+
+  function glassIcon(ml,maxMl,uid){
+    var ratio = clamp(ml/maxMl, 0.18, 1);
+    var fillTop = 4 + (1-ratio)*15;
+    var clipId = 'gclip'+uid;
+    return '<svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">'+
+      '<defs><clipPath id="'+clipId+'"><path d="M6 3H18L16.5 20C16.4 21.1 15.5 22 14.3 22H9.7C8.5 22 7.6 21.1 7.5 20L6 3Z"/></clipPath></defs>'+
+      '<g clip-path="url(#'+clipId+')">'+
+        '<rect x="4" y="'+fillTop+'" width="16" height="20" fill="var(--accent-1)" fill-opacity="0.2"/>'+
+        '<rect x="4" y="'+fillTop+'" width="16" height="1.6" fill="var(--accent-1)" fill-opacity="0.6"/>'+
+      '</g>'+
+      '<path d="M6 3H18L16.5 20C16.4 21.1 15.5 22 14.3 22H9.7C8.5 22 7.6 21.1 7.5 20L6 3Z" fill="none" stroke="var(--accent-1)" stroke-width="1.6" stroke-linejoin="round"/>'+
+      '</svg>';
+  }
+
+  function waveDecoration(){
+    return '<svg class="hero-waves" viewBox="0 0 400 90" preserveAspectRatio="none" aria-hidden="true">'+
+      '<path d="M0,36 C60,64 140,8 200,32 C260,56 340,14 400,40 L400,90 L0,90 Z" fill="rgba(255,255,255,.10)"/>'+
+      '<path d="M0,52 C70,80 150,28 220,50 C290,72 350,36 400,54 L400,90 L0,90 Z" fill="rgba(255,255,255,.16)"/>'+
+    '</svg>';
+  }
+
+  function checkIcon(){
+    return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'+
+      '<path d="M5 12.5L10 17.5L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function trashIcon(){
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'+
+      '<path d="M4 7H20M9.5 7V5C9.5 4.4 10 4 10.5 4H13.5C14 4 14.5 4.4 14.5 5V7M18.5 7L17.8 19C17.7 20.1 16.8 21 15.7 21H8.3C7.2 21 6.3 20.1 6.2 19L5.5 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function closeIcon(){
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'+
+      '<path d="M6 6L18 18M18 6L6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+  }
+
+  var CAPSULE_SHAPE = '<rect x="20" y="8" width="60" height="184" rx="30" ry="30"/>';
+  var CAPSULE_SEAM = 'M20,100 L80,100';
+
+  function wavePath(y,amp,x0,x1,step,bottom){
+    var d='M'+x0+','+y, x=x0, up=true;
+    while(x<x1){
+      var midX=x+step/2, nextX=x+step, cy=y+(up?-amp:amp);
+      d+=' Q'+midX+','+cy+' '+nextX+','+y;
+      x=nextX; up=!up;
+    }
+    d+=' L'+x1+','+bottom+' L'+x0+','+bottom+' Z';
+    return d;
+  }
+
+  function capsuleSVG(percent,done){
+    var pct=clamp(percent,0,1);
+    var top=14, bottom=186;
+    var liquidY = bottom-pct*(bottom-top);
+    var amp = (pct>0.03 && pct<0.97) ? 2.6 : 0;
+    var fillColor = 'var(--success)';
+    var fillOpacity = done ? '0.92' : '0.85';
+    return '<svg viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">'+
+      '<defs>'+
+        '<clipPath id="capsuleClip">'+CAPSULE_SHAPE+'</clipPath>'+
+        '<radialGradient id="capsuleGlow" cx="50%" cy="55%" r="55%">'+
+          '<stop offset="0" stop-color="'+fillColor+'" stop-opacity="0.32"/>'+
+          '<stop offset="1" stop-color="'+fillColor+'" stop-opacity="0"/>'+
+        '</radialGradient>'+
+      '</defs>'+
+      '<circle cx="50" cy="100" r="72" fill="url(#capsuleGlow)"/>'+
+      '<g fill="var(--hero-ring-track)">'+CAPSULE_SHAPE+'</g>'+
+      '<g clip-path="url(#capsuleClip)">'+
+        '<path class="fill-wave" d="'+wavePath(liquidY,amp,-25,125,25,200)+'" fill="'+fillColor+'" fill-opacity="'+fillOpacity+'"/>'+
+        '<rect x="0" y="'+liquidY+'" width="100" height="2" fill="#fff" fill-opacity=".45"/>'+
+      '</g>'+
+      '<g fill="none" stroke="rgba(255,255,255,.5)" stroke-width="1.6">'+CAPSULE_SHAPE+'</g>'+
+      '<path d="'+CAPSULE_SEAM+'" stroke="rgba(255,255,255,.3)" stroke-width="1.2" stroke-dasharray="3 3"/>'+
+      '<path d="M30,30 Q26,100 30,170" stroke="rgba(255,255,255,.4)" stroke-width="4" stroke-linecap="round" fill="none"/>'+
+      '</svg>';
+  }
+
+  function last7Days(){
+    var days=[];
+    var now=new Date();
+    for(var i=6;i>=0;i--){
+      var d=new Date(now.getFullYear(),now.getMonth(),now.getDate()-i);
+      days.push(d);
+    }
+    return days;
+  }
+
+  function bodyHTML(state){
+    var today=new Date();
+    var tKey=dateKey(today);
+    var total=totalFor(tKey);
+    var goal=state.goal;
+    var percent = goal>0 ? total/goal : 0;
+    var done = total>=goal && goal>0;
+    var remaining = Math.max(0,goal-total);
+
+    var dateStr = today.toLocaleDateString('ru-RU',{day:'numeric',month:'long',weekday:'long'});
+    dateStr = dateStr.charAt(0).toUpperCase()+dateStr.slice(1);
+
+    var maxQuick = Math.max.apply(null, QUICK_ADDS.map(function(q){ return q.ml; }));
+    var quickHTML = QUICK_ADDS.map(function(q,i){
+      return '<button class="quick-btn" onclick="addEntry('+q.ml+')">'+glassIcon(q.ml,maxQuick,i)+
+        '<span><span class="quick-btn-label">'+q.label+'</span><br><span class="quick-btn-ml">+'+q.ml+' мл</span></span></button>';
+    }).join('');
+
+    var entries = (state.logs[tKey] || []).slice().sort(function(a,b){ return b.id > a.id ? 1 : -1; });
+    var logHTML;
+    if(entries.length===0){
+      logHTML = '<div class="empty-note">Пока ничего не добавлено сегодня. Начните со стакана воды.</div>';
+    } else {
+      logHTML = entries.map(function(e){
+        return '<div class="log-row"><div class="log-left"><span class="log-time">'+e.time+'</span>'+
+          '<span class="log-ml">'+e.amount+' мл</span></div>'+
+          '<button class="log-del" onclick="removeEntry(\''+e.id+'\')" aria-label="Удалить запись">'+trashIcon()+'</button></div>';
+      }).join('');
+    }
+
+    var days = last7Days();
+    var weekHTML = days.map(function(d){
+      var k=dateKey(d);
+      var dTotal=totalFor(k);
+      var rawPct = goal>0 ? dTotal/goal : 0;
+      var dPct = clamp(rawPct,0,1);
+      var heightPx = dTotal>0 ? Math.round(6 + dPct*66) : 3;
+      var isToday = k===tKey;
+      return '<div class="week-col'+(isToday?' today':'')+'">'+
+        '<span class="week-pct">'+(isToday && dTotal>0 ? Math.round(rawPct*100)+'%' : '')+'</span>'+
+        '<div class="week-bar-track"><div class="week-bar-fill" style="height:'+heightPx+'px"></div></div>'+
+        '<span class="week-label">'+WEEKDAY_SHORT[d.getDay()]+'</span></div>';
+    }).join('');
+
+    var entryWord = ruPlural(entries.length,['запись','записи','записей']);
+
+    return ''+
+    '<div class="page">'+
+      '<div class="hero">'+
+        waveDecoration()+
+        '<div class="hero-top">'+
+          '<div class="brand"><span class="brand-chip">'+dropletIcon(13,'#fff')+'</span><span class="brand-label">Дневник воды</span></div>'+
+          '<div class="date">'+dateStr+'</div>'+
+        '</div>'+
+        '<div class="figure-wrap">'+capsuleSVG(percent,done)+'</div>'+
+        '<div class="figure-readout">'+
+          '<span class="figure-amount">'+total+'</span>'+
+          '<span class="figure-unit">мл</span>'+
+          '<span class="figure-goal">из '+goal+' мл</span>'+
+        '</div>'+
+        '<div class="status-line'+(done?' done':'')+'">'+(done ? checkIcon()+'Норма выполнена сегодня' : 'Осталось выпить '+remaining+' мл')+'</div>'+
+      '</div>'+
+
+      '<div class="card">'+
+        '<div class="section-title">Добавить воду</div>'+
+        '<div class="quick-grid">'+quickHTML+'</div>'+
+        '<div class="custom-row">'+
+          '<div class="section-title" style="margin-bottom:8px">Своё количество</div>'+
+          '<div id="custom-form" class="inline-form">'+
+            '<input type="number" id="custom-amount" placeholder="мл" min="10" max="5000" step="10" onkeydown="if(event.key===\'Enter\')addCustom()">'+
+            '<button onclick="addCustom()">Добавить</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+      '<div class="card">'+
+        '<div class="section-title">Сегодня · '+entries.length+' '+entryWord+'</div>'+
+        '<div class="log-list">'+logHTML+'</div>'+
+      '</div>'+
+
+      '<div class="card">'+
+        '<div class="section-title">Последние 7 дней</div>'+
+        '<div class="week-row">'+weekHTML+'</div>'+
+      '</div>'+
+
+      '<div class="card">'+
+        '<div class="section-title">Дневная норма</div>'+
+        '<div class="goal-row">'+
+          '<span class="goal-value">'+goal+' мл в день</span>'+
+        '</div>'+
+        '<div id="goal-edit" class="inline-form">'+
+          '<input type="number" id="goal-input" value="'+goal+'" min="500" max="8000" step="50" onkeydown="if(event.key===\'Enter\')saveGoal()">'+
+          '<button onclick="saveGoal()">Сохранить</button>'+
+        '</div>'+
+        '<div style="margin-top:16px">'+
+          '<div class="section-title" style="margin-bottom:8px">Рассчитать по весу</div>'+
+          '<div id="weight-calc">'+
+            '<div class="inline-form">'+
+              '<input type="number" id="weight-input" placeholder="Вес, кг" min="20" max="250" step="1" onkeydown="if(event.key===\'Enter\')saveWeightGoal()">'+
+              '<button onclick="saveWeightGoal()">Сохранить</button>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="footnote">Ориентир: около 30 мл воды на кг веса в день. При беременности, жаре, спорте или заболеваниях норма может отличаться — уточните у врача.</div>'+
+      '</div>'+
+
+      '<div class="card">'+
+        '<div class="section-title">Напоминания</div>'+
+        '<div class="reminder-settings-row">'+
+          '<div class="reminder-settings-label">'+
+            '<span class="goal-value">Напоминание пить воду</span>'+
+            '<span>'+(state.remindersEnabled ? 'Включены · раз в '+(state.reminderMinutes/60)+' '+ruPlural(state.reminderMinutes/60,['час','часа','часов']) : 'Выключены')+'</span>'+
+          '</div>'+
+          '<label class="switch"><input type="checkbox" '+(state.remindersEnabled?'checked':'')+' onchange="toggleReminders()"><span class="track"></span><span class="thumb"></span></label>'+
+        '</div>'+
+        '<div class="reminder-interval">'+
+          '<span style="font-size:13px;color:var(--text-muted)">Интервал:</span>'+
+          '<select onchange="setReminderMinutes(this)">'+
+            REMINDER_HOURS.map(function(h){
+              var mins=h*60;
+              return '<option value="'+mins+'"'+(mins===state.reminderMinutes?' selected':'')+'>'+h+' '+ruPlural(h,['час','часа','часов'])+'</option>';
+            }).join('')+
+          '</select>'+
+          '<button class="text-btn muted" onclick="testReminder()">Проверить сейчас</button>'+
+        '</div>'+
+        '<div class="footnote">Напоминание на этой странице работает, только пока вкладка браузера открыта.</div>'+
+      '</div>'+
+    '</div>';
+  }
+
+  function renderUI(){
+    document.getElementById('app').innerHTML = bodyHTML(STATE);
+  }
+
+  function trimOldDays(){
+    var keys = Object.keys(STATE.logs).sort();
+    while(keys.length>14){
+      delete STATE.logs[keys.shift()];
+    }
+  }
+
+  function saveBackup(){
+    try{ localStorage.setItem(BACKUP_KEY, JSON.stringify(STATE)); }catch(e){}
+  }
+
+  function commit(){
+    saveBackup();
+    renderUI();
+  }
+
+  window.addEntry = function(ml){
+    ml = Math.round(Number(ml));
+    if(!ml || ml<=0 || ml>5000) return;
+    var key = dateKey(new Date());
+    if(!STATE.logs[key]) STATE.logs[key]=[];
+    var entry = {id:makeId(), amount:ml, time:timeLabel(new Date())};
+    STATE.logs[key].push(entry);
+    trimOldDays();
+    commit();
+    showUndoToast(entry.id, ml);
+  };
+
+  window.addCustom = function(){
+    var input=document.getElementById('custom-amount');
+    if(!input) return;
+    var val=Number(input.value);
+    if(!val || val<=0){ input.focus(); return; }
+    window.addEntry(val);
+  };
+
+  window.removeEntry = function(id){
+    var key = dateKey(new Date());
+    var arr = STATE.logs[key];
+    if(!arr) return;
+    STATE.logs[key] = arr.filter(function(e){ return e.id!==id; });
+    commit();
+  };
+
+  function showUndoToast(id, ml){
+    var el = document.getElementById('undo-toast');
+    if(!el) return;
+    el.innerHTML = '<div class="undo-toast-card"><span>Добавлено '+ml+' мл</span>'+
+      '<button class="undo-toast-btn" onclick="performUndo(\''+id+'\')">Отменить</button></div>';
+    el.hidden = false;
+    clearTimeout(undoToastTimer);
+    undoToastTimer = setTimeout(function(){ el.hidden = true; }, 5000);
+  }
+
+  window.performUndo = function(id){
+    var el = document.getElementById('undo-toast');
+    if(el) el.hidden = true;
+    clearTimeout(undoToastTimer);
+    window.removeEntry(id);
+  };
+
+  window.saveGoal = function(){
+    var input=document.getElementById('goal-input');
+    if(!input) return;
+    var val=Math.round(Number(input.value));
+    if(!val || val<200 || val>10000) return;
+    STATE.goal=val;
+    commit();
+  };
+
+  window.saveWeightGoal = function(){
+    var input=document.getElementById('weight-input');
+    if(!input) return;
+    var kg=Number(input.value);
+    if(!kg || kg<=0){ input.focus(); return; }
+    STATE.goal = Math.round(kg*30/10)*10;
+    commit();
+  };
+
+  window.toggleEl = function(id){
+    var el=document.getElementById(id);
+    if(el) el.hidden=!el.hidden;
+  };
+
+  function ensureAudio(){
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+      if(audioCtx.state==='suspended') audioCtx.resume();
+    }catch(e){}
+  }
+
+  function beep(){
+    try{
+      ensureAudio();
+      if(!audioCtx) return;
+      var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.type='sine'; o.frequency.value=880;
+      o.connect(g); g.connect(audioCtx.destination);
+      var t=audioCtx.currentTime;
+      g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.25,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+0.5);
+      o.start(t); o.stop(t+0.5);
+    }catch(e){}
+  }
+
+  function tryBrowserNotification(){
+    try{
+      if(!('Notification' in window)) return;
+      if(Notification.permission==='granted'){
+        new Notification('Пора выпить воды', {body:'Загляните в «Дневник воды»'});
+      } else if(Notification.permission!=='denied'){
+        Notification.requestPermission();
+      }
+    }catch(e){}
+  }
+
+  function flashTitle(){
+    if(document.hasFocus && document.hasFocus()) return;
+    var on=false;
+    clearInterval(titleFlashTimer);
+    titleFlashTimer=setInterval(function(){
+      document.title = on ? origTitle : '💧 Пора пить воду';
+      on=!on;
+    },1200);
+    window.addEventListener('focus', function stop(){
+      clearInterval(titleFlashTimer);
+      document.title=origTitle;
+      window.removeEventListener('focus',stop);
+    });
+  }
+
+  function showReminderBanner(){
+    var key=dateKey(new Date());
+    var remaining=Math.max(0,STATE.goal-totalFor(key));
+    var el=document.getElementById('reminder-banner');
+    if(!el) return;
+    el.innerHTML = '<div class="reminder-card">'+
+      '<div class="reminder-icon">'+dropletIcon(22,'var(--accent-1)')+'</div>'+
+      '<div class="reminder-text"><strong>Пора выпить воды</strong><span>'+
+        (remaining>0 ? 'Осталось '+remaining+' мл до нормы' : 'Норма уже выполнена, но вода не помешает')+
+      '</span></div>'+
+      '<div class="reminder-actions">'+
+        '<button class="reminder-add-btn" onclick="addEntry(200);hideReminderBanner();">+200 мл</button>'+
+        '<button class="reminder-close" onclick="hideReminderBanner()" aria-label="Закрыть">'+closeIcon()+'</button>'+
+      '</div></div>';
+    el.hidden=false;
+    beep();
+    tryBrowserNotification();
+    flashTitle();
+  }
+
+  window.hideReminderBanner = function(){
+    var el=document.getElementById('reminder-banner');
+    if(el) el.hidden=true;
+  };
+
+  function startReminderTimer(){
+    if(reminderTimer){ clearInterval(reminderTimer); reminderTimer=null; }
+    if(!STATE.remindersEnabled) return;
+    reminderTimer=setInterval(showReminderBanner, STATE.reminderMinutes*60*1000);
+  }
+
+  window.toggleReminders = function(){
+    STATE.remindersEnabled = !STATE.remindersEnabled;
+    if(STATE.remindersEnabled){ ensureAudio(); tryBrowserNotification(); }
+    startReminderTimer();
+    commit();
+  };
+
+  window.setReminderMinutes = function(sel){
+    var v=Number(sel.value);
+    if(!v) return;
+    STATE.reminderMinutes=v;
+    startReminderTimer();
+    commit();
+  };
+
+  window.testReminder = function(){
+    ensureAudio();
+    showReminderBanner();
+  };
+
+  renderUI();
+  startReminderTimer();
+})();
+</script>
+</body>
+</html>
