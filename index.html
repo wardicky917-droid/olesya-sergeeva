@@ -171,7 +171,7 @@ button,a,input,select{touch-action:manipulation;}
     if(!UID){ UID = makeUid(); localStorage.setItem(UID_KEY, UID); }
   }catch(e){ UID = makeUid(); }
 
-  var STATE = {goal:1740, logs:{}, remindersEnabled:false, reminderMinutes:60};
+  var STATE = {goal:1740, logs:{}, remindersEnabled:false, reminderMinutes:60, weight:null};
   try{
     var savedRaw = localStorage.getItem(BACKUP_KEY);
     if(savedRaw){
@@ -409,7 +409,7 @@ button,a,input,select{touch-action:manipulation;}
           '<div class="section-title" style="margin-bottom:8px">Рассчитать по весу</div>'+
           '<div id="weight-calc">'+
             '<div class="inline-form">'+
-              '<input type="number" id="weight-input" placeholder="Вес, кг" min="20" max="250" step="1" onkeydown="if(event.key===\'Enter\')saveWeightGoal()">'+
+              '<input type="number" id="weight-input" placeholder="Вес, кг" min="20" max="250" step="1" value="'+(state.weight||'')+'" onkeydown="if(event.key===\'Enter\')saveWeightGoal()">'+
               '<button onclick="saveWeightGoal()">Сохранить</button>'+
             '</div>'+
           '</div>'+
@@ -526,6 +526,7 @@ button,a,input,select{touch-action:manipulation;}
     if(!input) return;
     var kg=Number(input.value);
     if(!kg || kg<=0){ input.focus(); return; }
+    STATE.weight = kg;
     STATE.goal = Math.round(kg*30/10)*10;
     commit();
   };
