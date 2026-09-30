@@ -152,6 +152,11 @@ button,a,input,select{touch-action:manipulation;}
 .login-card button{width:100%;margin-top:10px;padding:13px;border-radius:12px;border:none;background:var(--accent-1);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;}
 .login-card button:disabled{opacity:.6;}
 .login-error{font-size:13px;color:var(--danger);margin-top:10px;}
+.chat-messages{max-height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px;}
+.chat-msg{padding:10px 12px;border-radius:14px;font-size:13.5px;line-height:1.4;max-width:88%;white-space:pre-wrap;}
+.chat-user{align-self:flex-end;background:var(--accent-1);color:#fff;border-bottom-right-radius:4px;}
+.chat-assistant{align-self:flex-start;background:var(--surface-2);color:var(--text);border-bottom-left-radius:4px;}
+.chat-assistant.chat-pending{color:var(--text-muted);font-style:italic;}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;0,800;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -464,11 +469,39 @@ button,a,input,select{touch-action:manipulation;}
         '<p class="footnote" style="margin:0 0 10px">Привяжи бота, чтобы отмечать воду прямо из Telegram кнопками — записи появятся здесь автоматически.</p>'+
         '<a class="telegram-link-btn" href="https://t.me/'+BOT_USERNAME+'?start='+UID+'" target="_blank" rel="noopener">Подключить Telegram</a>'+
       '</div>'+
+
+      '<div class="card">'+
+        '<div class="section-title">Умный помощник</div>'+
+        '<div id="chat-messages" class="chat-messages">'+chatHTML()+'</div>'+
+        '<div class="inline-form">'+
+          '<input type="text" id="chat-input" placeholder="Спросите что-нибудь..." autocomplete="off" onkeydown="if(event.key===\'Enter\')sendChatMessage()">'+
+          '<button onclick="sendChatMessage()">Отправить</button>'+
+        '</div>'+
+      '</div>'+
     '</div>';
+  }
+
+  var chatHistory = [];
+
+  function escapeHtml(s){
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function chatHTML(){
+    if(chatHistory.length===0){
+      return '<div class="empty-note">Спросите про питьевой режим, самочувствие или что угодно ещё.</div>';
+    }
+    return chatHistory.map(function(m){
+      return '<div class="chat-msg '+(m.role==='user'?'chat-user':'chat-assistant')+(m.pending?' chat-pending':'')+'">'+escapeHtml(m.text)+'</div>';
+    }).join('');
   }
 
   function renderUI(){
     document.getElementById('app').innerHTML = bodyHTML(STATE);
+    var chatEl = document.getElementById('chat-messages');
+    if(chatEl) chatEl.scrollTop = chatEl.scrollHeight;
   }
 
   function trimOldDays(){
@@ -653,6 +686,38 @@ button,a,input,select{touch-action:manipulation;}
   window.testReminder = function(){
     ensureAudio();
     showReminderBanner();
+  };
+
+  window.sendChatMessage = function(){
+    var input = document.getElementById('chat-input');
+    if(!input || !input.value.trim()) return;
+    var text = input.value.trim();
+    input.value = '';
+
+    chatHistory.push({role:'user', text: text});
+    chatHistory.push({role:'assistant', text:'Печатает…', pending:true});
+    renderUI();
+
+    var key = dateKey(new Date());
+    var total = totalFor(key);
+    var ctx = 'Сегодня выпито '+total+' мл из '+STATE.goal+' мл нормы.';
+
+    fetch('/.netlify/functions/ask-assistant', {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({message: text, context: ctx})
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        chatHistory.pop();
+        chatHistory.push({role:'assistant', text: (data && data.reply) || 'Не удалось получить ответ. Попробуйте ещё раз.'});
+        renderUI();
+      })
+      .catch(function(){
+        chatHistory.pop();
+        chatHistory.push({role:'assistant', text:'Ошибка сети, попробуйте ещё раз.'});
+        renderUI();
+      });
   };
 
   function syncFromBot(){
