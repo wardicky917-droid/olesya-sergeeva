@@ -142,11 +142,31 @@ button,a,input,select{touch-action:manipulation;}
   .week-bar-fill{transition:none;}
   .reminder-card{animation:none;}
 }
+.login-screen{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg-grad);}
+.login-card{width:100%;max-width:340px;background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:28px 24px;box-shadow:var(--card-shadow);display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;}
+.login-icon{width:52px;height:52px;border-radius:16px;background:var(--accent-1);display:flex;align-items:center;justify-content:center;margin-bottom:6px;}
+.login-title{font-family:'Fraunces',Georgia,serif;font-size:20px;font-weight:700;color:var(--text);margin:0;}
+.login-sub{font-size:13px;color:var(--text-muted);margin:0 0 14px;}
+.login-card input[type="password"]{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-family:inherit;font-size:16px;text-align:center;letter-spacing:2px;}
+.login-card input[type="password"]:focus{outline:2px solid var(--accent-1);outline-offset:1px;}
+.login-card button{width:100%;margin-top:10px;padding:13px;border-radius:12px;border:none;background:var(--accent-1);color:#fff;font-family:inherit;font-weight:700;font-size:14px;cursor:pointer;}
+.login-card button:disabled{opacity:.6;}
+.login-error{font-size:13px;color:var(--danger);margin-top:10px;}
 </style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,600;0,700;0,800;1,600&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
+<div id="login-screen" class="login-screen">
+  <div class="login-card">
+    <div class="login-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.5C12 2.5 5 11.2 5 15.5C5 19.6 8.13 22.5 12 22.5C15.87 22.5 19 19.6 19 15.5C19 11.2 12 2.5 12 2.5Z" fill="#fff"/></svg></div>
+    <h1 class="login-title">Дневник воды</h1>
+    <p class="login-sub">Введите пароль для входа</p>
+    <input type="password" id="login-password" placeholder="Пароль" autocomplete="current-password" inputmode="text">
+    <button id="login-submit" onclick="tryLogin()">Войти</button>
+    <div id="login-error" class="login-error" hidden>Неверный пароль</div>
+  </div>
+</div>
 <div id="app"></div>
 <div id="reminder-banner" class="reminder-banner" hidden></div>
 <div id="undo-toast" class="undo-toast" hidden></div>
@@ -659,10 +679,73 @@ button,a,input,select{touch-action:manipulation;}
       .catch(function(){});
   }
 
-  renderUI();
-  startReminderTimer();
-  syncFromBot();
-  setInterval(syncFromBot, 15000);
+  var AUTH_KEY = 'water-tracker-authed-v1';
+
+  function initApp(){
+    renderUI();
+    startReminderTimer();
+    syncFromBot();
+    setInterval(syncFromBot, 15000);
+  }
+
+  function hideLoginScreen(){
+    var el = document.getElementById('login-screen');
+    if(el) el.hidden = true;
+  }
+
+  window.tryLogin = function(){
+    var input = document.getElementById('login-password');
+    var errEl = document.getElementById('login-error');
+    var btn = document.getElementById('login-submit');
+    if(!input || !input.value){ if(input) input.focus(); return; }
+    var pwd = input.value;
+    errEl.hidden = true;
+    btn.disabled = true;
+    btn.textContent = 'Проверка...';
+    fetch('/.netlify/functions/auth-check', {
+      method: 'POST',
+      headers: {'content-type':'application/json'},
+      body: JSON.stringify({password: pwd})
+    })
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        if(data && data.ok){
+          try{ localStorage.setItem(AUTH_KEY, '1'); }catch(e){}
+          hideLoginScreen();
+          initApp();
+        } else {
+          errEl.textContent = 'Неверный пароль';
+          errEl.hidden = false;
+          input.value = '';
+          input.focus();
+        }
+      })
+      .catch(function(){
+        btn.disabled = false;
+        btn.textContent = 'Войти';
+        errEl.textContent = 'Ошибка сети, попробуйте ещё раз';
+        errEl.hidden = false;
+      });
+  };
+
+  (function initAuthGate(){
+    var loginInput = document.getElementById('login-password');
+    if(loginInput){
+      loginInput.addEventListener('keydown', function(ev){
+        if(ev.key==='Enter') window.tryLogin();
+      });
+    }
+    var isAuthed = false;
+    try{ isAuthed = localStorage.getItem(AUTH_KEY) === '1'; }catch(e){}
+    if(isAuthed){
+      hideLoginScreen();
+      initApp();
+    } else if(loginInput){
+      loginInput.focus();
+    }
+  })();
 })();
 </script>
 </body>
